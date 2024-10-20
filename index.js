@@ -11,7 +11,7 @@ const app = express();
 connectDB();
 
 app.use(cors({
-  origin: ['https://react-manage-projects.vercel.app'], 
+  origin: 'https://merng-client-seven.vercel.app/', 
   credentials: true,
   methods: ["POST", "GET", "DELETE", "UPDATE"]
 }));
