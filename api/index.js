@@ -137,9 +137,19 @@ const mutation = new GraphQLObjectType({
             args: {
                 id: { type: GraphQLNonNull(GraphQLID) },
             },
-            resolve(parent, args) {
-                return Client.findOneAndDelete(args.id);
-            }
+            async resolve(parent, args) {
+                try {
+                    const deletedClient = await Client.findByIdAndDelete(args.id);
+                    if (!deletedClient) {
+                        throw new Error(`No se encontró un cliente con el ID ${args.id}`);
+                    }
+                    return deletedClient;
+                } catch (error) {
+                    // Aquí puedes personalizar cómo manejar diferentes tipos de errores
+                    console.error("Error al eliminar el cliente:", error.message);
+                    throw new Error("No se pudo eliminar el cliente. Inténtalo de nuevo más tarde.");
+                }
+            },
         },
         // get user
         getUser: {
@@ -194,7 +204,7 @@ const mutation = new GraphQLObjectType({
                 id: { type: GraphQLNonNull(GraphQLID) }
             },
             resolve(parent, args) {
-                return Project.findOneAndDelete(args.id);
+                return Project.findByIdAndDelete(args.id);
             }
         },
         //update a project
@@ -239,7 +249,8 @@ const mutation = new GraphQLObjectType({
                 price: { type: GraphQLNonNull(GraphQLString) },
                 amount: { type: GraphQLNonNull(GraphQLString) },
                 image: { type: GraphQLNonNull(GraphQLString) },
-                characteristics: { type: GraphQLNonNull(GraphQLString) }
+                characteristics: { type: GraphQLNonNull(GraphQLString) },
+                barcode: { type: GraphQLNonNull(GraphQLString) }
             },
             resolve(parent, args) {
                 const product = new Product({
@@ -248,7 +259,8 @@ const mutation = new GraphQLObjectType({
                     price: args.price,
                     amount: args.amount,
                     image: args.image,
-                    characteristics: args.characteristics
+                    characteristics: args.characteristics,
+                    barcode: args.barcode
                 });
                 return product.save();
             },
@@ -260,7 +272,7 @@ const mutation = new GraphQLObjectType({
                 id: { type: GraphQLNonNull(GraphQLID) }
             },
             resolve(parent, args) {
-                return Product.findOneAndDelete(args.id);
+                return Product.findByIdAndDelete(args.id);
             }
         },
         //update a product
