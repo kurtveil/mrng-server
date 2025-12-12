@@ -20,6 +20,9 @@ const ProductSchema = new mongoose.Schema({
     },
     characteristics: { 
         type: String
+    },
+    code: { 
+        type: String
     }
 });
 

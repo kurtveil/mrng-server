@@ -5,7 +5,17 @@ const Client = require('../models/Client');
 const Product = require('../models/Product');
 const User = require('../models/User');
 
-const { GraphQLObjectType, GraphQLID, GraphQLString, GraphQLSchema, GraphQLList, GraphQLNonNull, GraphQLEnumType } = require('graphql');
+const {
+    GraphQLObjectType,
+    GraphQLID,
+    GraphQLString,
+    GraphQLSchema,
+    GraphQLList,
+    GraphQLNonNull,
+    GraphQLEnumType,
+    GraphQLInt,
+    GraphQLBoolean
+} = require('graphql');
 
 // ProjectType
 const ProjectType = new GraphQLObjectType({
@@ -42,20 +52,31 @@ const ProductType = new GraphQLObjectType({
         id: { type: GraphQLID },
         name: { type: GraphQLString },
         description: { type: GraphQLString },
-        price: { type: GraphQLString },
+        price: { type: GraphQLInt },
         characteristics: { type: GraphQLString },
-        amount: { type: GraphQLString },
+        amount: { type: GraphQLInt },
         image: { type: GraphQLString },
+        code: { type: GraphQLString },
     })
 });
 
-// UserType
+
+const UserResponseType = new GraphQLObjectType({
+    name: 'UserResponse',
+    fields: () => ({
+        success: { type: GraphQLNonNull(GraphQLBoolean) },
+        user: { type: UserType },
+        token: { type: GraphQLString }
+    })
+});
+
+
 const UserType = new GraphQLObjectType({
     name: 'User',
     fields: () => ({
-        id: { type: GraphQLID },
-        email: { type: GraphQLString },
         password: { type: GraphQLString },
+        username: { type: GraphQLString },
+        email: { type: GraphQLString }
     })
 });
 
@@ -151,22 +172,72 @@ const mutation = new GraphQLObjectType({
                 }
             },
         },
-        // get user
-        getUser: {
-            type: UserType,
+        //  User
+        authUser: {// Authentication User
+            type: UserResponseType,
             args: {
                 email: { type: GraphQLNonNull(GraphQLString) },
                 password: { type: GraphQLNonNull(GraphQLString) },
             },
-            resolve(parent, args) {
-                // const user = new User({
-                //     usename: args.username,
-                //     email: args.email,
-                //     password: args.password
-                // });
-                return User.findOne({ email: args.email, password: args.password });
+            async resolve(_, args) {
+                const user = await User.findOne({ email: args.email, password: args.password });
+                if (user) {
+                    return { success: true };
+                } else {
+                    throw new Error('User not found');
+                }
             }
         },
+        // Register User
+        registerUser: {
+            type: new GraphQLObjectType({
+              name: 'RegisterResponse',
+              fields: {
+                success: { type: GraphQLNonNull(GraphQLBoolean) },
+                message: { type: GraphQLString },
+                user: { type: UserType },
+              },
+            }),
+            args: {
+              username: { type: GraphQLNonNull(GraphQLString) },
+              email: { type: GraphQLNonNull(GraphQLString) },
+              password: { type: GraphQLNonNull(GraphQLString) },
+            },
+            async resolve(_, args) {
+              try {
+                // Verificar si el correo electrónico ya existe
+                const existingUser = await User.findOne({ email: args.email });
+                if (existingUser) {
+                  return {
+                    success: false,
+                    message: 'El correo electrónico ya está en uso.',
+                    user: null,
+                  };
+                }
+      
+                // Crear y guardar el nuevo usuario
+                const user = new User({
+                  username: args.username,
+                  email: args.email,
+                  password: args.password,
+                });
+                const savedUser = await user.save();
+      
+                return {
+                  success: true,
+                  message: 'Usuario registrado con éxito.',
+                  user: savedUser,
+                };
+              } catch (error) {
+                console.error('Error al registrar usuario:', error);
+                return {
+                  success: false,
+                  message: 'Error al registrar usuario.',
+                  user: null,
+                };
+              }
+            },
+          },
         // projects
         // Add a project
         addProject: {
@@ -246,11 +317,10 @@ const mutation = new GraphQLObjectType({
             args: {
                 name: { type: GraphQLNonNull(GraphQLString) },
                 description: { type: GraphQLNonNull(GraphQLString) },
-                price: { type: GraphQLNonNull(GraphQLString) },
-                amount: { type: GraphQLNonNull(GraphQLString) },
-                image: { type: GraphQLNonNull(GraphQLString) },
+                price: { type: GraphQLNonNull(GraphQLInt) },
+                amount: { type: GraphQLNonNull(GraphQLInt) },
                 characteristics: { type: GraphQLNonNull(GraphQLString) },
-                barcode: { type: GraphQLNonNull(GraphQLString) }
+                code: { type: GraphQLNonNull(GraphQLString) }
             },
             resolve(parent, args) {
                 const product = new Product({
@@ -258,9 +328,8 @@ const mutation = new GraphQLObjectType({
                     description: args.description,
                     price: args.price,
                     amount: args.amount,
-                    image: args.image,
                     characteristics: args.characteristics,
-                    barcode: args.barcode
+                    code: args.code
                 });
                 return product.save();
             },
@@ -282,10 +351,10 @@ const mutation = new GraphQLObjectType({
                 id: { type: GraphQLNonNull(GraphQLID) },
                 name: { type: GraphQLString },
                 description: { type: GraphQLString },
-                amount: { type: GraphQLString },
-                price: { type: GraphQLString },
-                image: { type: GraphQLString },
-              
+                amount: { type: GraphQLNonNull(GraphQLInt) },
+                price: { type: GraphQLNonNull(GraphQLInt) },
+                characteristics: { type: GraphQLNonNull(GraphQLString) },
+
             },
             resolve(parent, args) {
                 return Product.findByIdAndUpdate(
@@ -295,7 +364,8 @@ const mutation = new GraphQLObjectType({
                             name: args.name,
                             description: args.description,
                             price: args.price,
-                            amount: args.amount
+                            amount: args.amount,
+                            characteristics: args.characteristics
                         }
                     },
                     { new: true }
@@ -308,4 +378,5 @@ const mutation = new GraphQLObjectType({
 module.exports = new GraphQLSchema({
     query: RootQuery,
     mutation
+
 });

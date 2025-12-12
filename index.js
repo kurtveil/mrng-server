@@ -11,7 +11,7 @@ const app = express();
 connectDB();
 
 app.use(cors({
-  origin: ['https://merng-client-seven.vercel.app', 'http://localhost:3000'], 
+  origin: ['https://merng-client-seven.vercel.app', 'http://localhost:3000', 'http://localhost:4200'], 
   credentials: true,
   methods: ["POST", "GET", "DELETE", "UPDATE"]
 }));
@@ -25,7 +25,10 @@ app.use(
     parameterLimit: 50000,
   }),
 );
-app.use('/graphql', graphqlHTTP({
+app.use(
+  '/graphql', 
+  cors(),
+  graphqlHTTP({
     schema,
     graphiql: process.env.NODE_ENV === 'development'
 }));
